@@ -1,0 +1,109 @@
+-- Retrieve all albums by a specific artist
+SELECT * FROM Albums WHERE ArtistID = (SELECT ArtistID FROM Artists WHERE Name = 'The Beatles');
+
+-- List all customers who purchased a specific album
+SELECT Customers.Name, Customers.Email
+FROM Sales
+JOIN Customers ON Sales.CustomerID = Customers.CustomerID
+WHERE Sales.AlbumID = (SELECT AlbumID FROM Albums WHERE Title = 'Abbey Road');
+
+-- Display total sales for each album
+SELECT Albums.Title, SUM(Sales.TotalAmount) AS TotalSales
+FROM Sales
+JOIN Albums ON Sales.AlbumID = Albums.AlbumID
+GROUP BY Albums.Title;
+
+-- Show the current stock of each album
+SELECT Albums.Title, Inventory.StockQuantity
+FROM Inventory
+JOIN Albums ON Inventory.AlbumID = Albums.AlbumID;
+
+-- Retrieve all albums by a specific artist
+SELECT * FROM Albums WHERE ArtistID = (SELECT ArtistID FROM Artists WHERE Name = 'The Beatles');
+
+-- List all customers who purchased a specific album
+SELECT Customers.Name, Customers.Email
+FROM Sales
+JOIN Customers ON Sales.CustomerID = Customers.CustomerID
+WHERE Sales.AlbumID = (SELECT AlbumID FROM Albums WHERE Title = 'Abbey Road');
+
+-- Display total sales for each album
+SELECT Albums.Title, SUM(Sales.TotalAmount) AS TotalSales
+FROM Sales
+JOIN Albums ON Sales.AlbumID = Albums.AlbumID
+GROUP BY Albums.Title;
+
+-- Show the current stock of each album
+SELECT Albums.Title, Inventory.StockQuantity
+FROM Inventory
+JOIN Albums ON Inventory.AlbumID = Albums.AlbumID;
+
+-- Display the best-selling albums (by quantity)
+SELECT Albums.Title, SUM(Sales.Quantity) AS TotalQuantitySold
+FROM Sales
+JOIN Albums ON Sales.AlbumID = Albums.AlbumID
+GROUP BY Albums.Title
+ORDER BY TotalQuantitySold DESC;
+
+-- List customers who spent the most in the store
+SELECT Customers.Name, SUM(Sales.TotalAmount) AS TotalSpent
+FROM Sales
+JOIN Customers ON Sales.CustomerID = Customers.CustomerID
+GROUP BY Customers.Name
+ORDER BY TotalSpent DESC;
+
+-- Identify artists whose albums are low in stock
+SELECT Artists.Name, Albums.Title, Inventory.StockQuantity
+FROM Inventory
+JOIN Albums ON Inventory.AlbumID = Albums.AlbumID
+JOIN Artists ON Albums.ArtistID = Artists.ArtistID
+WHERE Inventory.StockQuantity < 10;
+
+-- Generate a sales report for a specific period
+SELECT Albums.Title, SUM(Sales.Quantity) AS TotalQuantitySold, SUM(Sales.TotalAmount) AS TotalRevenue
+FROM Sales
+JOIN Albums ON Sales.AlbumID = Albums.AlbumID
+WHERE Sales.SaleDate BETWEEN '2024-09-01' AND '2024-09-30'
+GROUP BY Albums.Title;
+
+-- Stored Procedure: Calculate and update total sales for an album
+DELIMITER //
+CREATE PROCEDURE UpdateTotalSales(IN album_id INT)
+BEGIN
+    DECLARE total_sales DECIMAL(10, 2);
+    
+    SELECT SUM(TotalAmount) INTO total_sales
+    FROM Sales
+    WHERE AlbumID = album_id;
+    
+    UPDATE Albums
+    SET Price = total_sales
+    WHERE AlbumID = album_id;
+END //
+DELIMITER ;
+
+-- Function: Calculate the average price of albums by genre
+DELIMITER //
+CREATE FUNCTION AveragePriceByGenre(genre_name VARCHAR(50)) RETURNS DECIMAL(10, 2)
+BEGIN
+    DECLARE avg_price DECIMAL(10, 2);
+    
+    SELECT AVG(Price) INTO avg_price
+    FROM Albums
+    WHERE ArtistID IN (SELECT ArtistID FROM Artists WHERE Genre = genre_name);
+    
+    RETURN avg_price;
+END //
+DELIMITER ;
+
+-- Trigger: Automatically update inventory after a sale is made
+DELIMITER //
+CREATE TRIGGER UpdateInventoryAfterSale
+AFTER INSERT ON Sales
+FOR EACH ROW
+BEGIN
+    UPDATE Inventory
+    SET StockQuantity = StockQuantity - NEW.Quantity
+    WHERE AlbumID = NEW.AlbumID;
+END //
+DELIMITER ;
